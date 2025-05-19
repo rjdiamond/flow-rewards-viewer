@@ -15,11 +15,14 @@ export default function Home() {
   // Define filters and their corresponding loyaltyRule IDs
   const FILTERS = {
     'Bridging': [
-      "4e0e6225-65dd-4280-8683-3e2dbbad9697"
+      "4e0e6225-65dd-4280-8683-3e2dbbad9697",
+      "b32a87fc-0a63-4a16-be16-05026e001859"
     ],
     'Protocol: Beezie': [
       "e4001ba6-7cc2-426e-812c-767818ff4e65",
-      "6d41fb3c-f80f-4034-b97c-44651dac203b"
+      "6d41fb3c-f80f-4034-b97c-44651dac203b",
+      "fceb1c4b-b3f2-4fa7-a7c5-2cdf2d074831",
+      "7c6545b3-374e-4d9a-819f-7c523aec5666"
     ],
     'Protocol: CryptoKitties': [
       "974b173f-fd2c-42e7-a3b9-51662f97dd29",
