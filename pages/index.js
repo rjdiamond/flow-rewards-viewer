@@ -146,7 +146,7 @@ const uniqueFilterOptions = [
   'All Transactions',
   'Asset Claimed',
   'Boxes Unlocked',
-  ...activeFilters.filter(f => f !== 'Boxes Unlocked' && f !== 'All Transactions'),
+  ...activeFilters.filter(f => f !== 'Boxes Unlocked' && f !== 'All Transactions' && f !== 'Asset Claimed'),
   'Other',
 ];
 
