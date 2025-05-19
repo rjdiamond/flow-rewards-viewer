@@ -5,6 +5,7 @@ export default function Home() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('All Transactions');
+  const [assets, setAssets] = useState([]);
 
   const currencyMap = {
     "d897904c-6dfb-4b43-a036-4938f96e7b51": "Keys",
@@ -172,18 +173,33 @@ const filteredTransactions = (() => {
   );
 })();
 
-  const fetchTransactions = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/getTransactions?walletAddress=${walletAddress}`);
-      const data = await res.json();
-      console.log(data);
-      setTransactions(data.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-    setLoading(false);
+const transactionsWithAssetName = transactions.map(tx => {
+  const mintingAssetId = tx.loyaltyTransaction?.metadata?.mintingContractAssetId;
+
+  // Defensive: Convert both sides to strings to be sure
+  const matchedAsset = mintingAssetId
+    ? assets.find(asset => String(asset.id) === String(mintingAssetId))
+    : null;
+
+  return {
+    ...tx,
+    assetName: matchedAsset ? matchedAsset.name : null,
+    hasAssetClaim: Boolean(mintingAssetId),
   };
+});
+
+const fetchTransactions = async () => {
+  setLoading(true);
+  try {
+    const res = await fetch(`/api/getTransactions?walletAddress=${walletAddress}`);
+    const data = await res.json();
+    setTransactions(data.transactions || []);
+    setAssets(data.assets || []); // Don't forget to set assets state
+  } catch (err) {
+    console.error(err);
+  }
+  setLoading(false);
+};
 
   const calculatePointsSum = (transactions) => {
     let totalPointsCredits = 0;
@@ -341,6 +357,7 @@ const filteredTransactions = (() => {
               const loyaltyRule = tx.loyaltyTransaction.loyaltyRule;
               const loyaltyRuleName = loyaltyRule ? loyaltyRule.name : 'No loyalty rule';
               const loyaltyRuleDescription = loyaltyRule ? loyaltyRule.description : '';
+              const assetName = tx.matchedAsset ? tx.matchedAsset.name : 'Unknown Asset';
 
               return (
                 <li key={tx.id} style={{ marginBottom: '1rem' }}>
@@ -352,12 +369,18 @@ const filteredTransactions = (() => {
                   <span style={{ color: amountColor }}>
                     {tx.amount} {currencyName}
                   </span>
-                  <br />
+                  {assetName !== 'Unknown Asset' && (
+                    <>
+                      <br />
+                      <strong>Asset Claimed! </strong> {assetName}
+                    </>
+                  )}
                   <hr />
                 </li>
               );
             })}
           </ul>
+
         ) : (
           !loading && <p style={{ textAlign: 'center' }}>No transactions found</p>
         )}
