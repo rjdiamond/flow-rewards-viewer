@@ -136,8 +136,15 @@ if (includesBoxesUnlocked) {
   activeFilters.push('Boxes Unlocked');
 }
 
+const includesAssetClaimed = transactions.some(tx => tx.matchedAsset);
+
+if (includesAssetClaimed) {
+  activeFilters.push('Asset Claimed');
+}
+
 const uniqueFilterOptions = [
   'All Transactions',
+  'Asset Claimed',
   'Boxes Unlocked',
   ...activeFilters.filter(f => f !== 'Boxes Unlocked' && f !== 'All Transactions'),
   'Other',
@@ -158,7 +165,7 @@ const filteredTransactions = (() => {
   if (filter === 'Other') {
     return transactions.filter(tx => {
       const id = tx.loyaltyTransaction?.loyaltyRule?.id;
-      return !allFilteredIds.includes(id) && !boxesUnlockedIds.has(id);
+      return !allFilteredIds.includes(id) && !boxesUnlockedIds.has(id) && !tx.matchedAsset;
     });
   }
 
@@ -166,6 +173,10 @@ const filteredTransactions = (() => {
     return transactions.filter(tx =>
       tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
     );
+  }
+
+  if (filter === 'Asset Claimed') {
+    return transactions.filter(tx => tx.matchedAsset);
   }
 
   return transactions.filter(tx =>
