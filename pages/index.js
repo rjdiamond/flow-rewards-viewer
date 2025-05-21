@@ -1,4 +1,23 @@
 import { useState } from 'react';
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -13,7 +32,7 @@ export default function Home() {
     "fea6109c-8549-45d2-a974-d8531f64994d": "Points"
   };
 
-  // Define filters and their corresponding loyaltyRule IDs
+  // Define filters (FILTERS constant remains the same as original)
   const FILTERS = {
     'Bridging': [
       "4e0e6225-65dd-4280-8683-3e2dbbad9697",
@@ -119,103 +138,93 @@ export default function Home() {
     ],
   };
 
-const allFilteredIds = Object.values(FILTERS).flat();
 
-const allFilterNames = Object.keys(FILTERS);
+  const allFilteredIds = Object.values(FILTERS).flat();
+  const allFilterNames = Object.keys(FILTERS);
 
-const activeFilters = allFilterNames.filter(filterName =>
-  transactions.some(tx => FILTERS[filterName].includes(tx.loyaltyTransaction?.loyaltyRule?.id))
-);
-
-// Add "Boxes Unlocked" filter if the wallet is in any description
-const includesBoxesUnlocked = transactions.some(tx =>
-  tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
-);
-
-if (includesBoxesUnlocked) {
-  activeFilters.push('Boxes Unlocked');
-}
-
-const includesAssetClaimed = transactions.some(tx => tx.matchedAsset);
-
-if (includesAssetClaimed) {
-  activeFilters.push('Asset Claimed');
-}
-
-const uniqueFilterOptions = [
-  'All Transactions',
-  'Asset Claimed',
-  'Boxes Unlocked',
-  ...activeFilters.filter(f => f !== 'Boxes Unlocked' && f !== 'All Transactions' && f !== 'Asset Claimed'),
-  'Other',
-];
-
-const boxesUnlockedIds = new Set(
-  transactions
-    .filter(tx =>
-      tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
-    )
-    .map(tx => tx.loyaltyTransaction?.loyaltyRule?.id)
-);
-
-// Filtering logic
-const filteredTransactions = (() => {
-  if (filter === 'All Transactions') return transactions;
-
-  if (filter === 'Other') {
-    return transactions.filter(tx => {
-      const id = tx.loyaltyTransaction?.loyaltyRule?.id;
-      return !allFilteredIds.includes(id) && !boxesUnlockedIds.has(id) && !tx.matchedAsset;
-    });
-  }
-
-  if (filter === 'Boxes Unlocked') {
-    return transactions.filter(tx =>
-      tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
-    );
-  }
-
-  if (filter === 'Asset Claimed') {
-    return transactions.filter(tx => tx.matchedAsset);
-  }
-
-  return transactions.filter(tx =>
-    FILTERS[filter]?.includes(tx.loyaltyTransaction?.loyaltyRule?.id)
+  const activeFilters = allFilterNames.filter(filterName =>
+    transactions.some(tx => FILTERS[filterName].includes(tx.loyaltyTransaction?.loyaltyRule?.id))
   );
-})();
 
-const transactionsWithAssetName = transactions.map(tx => {
-  const mintingAssetId = tx.loyaltyTransaction?.metadata?.mintingContractAssetId;
+  const includesBoxesUnlocked = transactions.some(tx =>
+    tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
+  );
 
-  // Defensive: Convert both sides to strings to be sure
-  const matchedAsset = mintingAssetId
-    ? assets.find(asset => String(asset.id) === String(mintingAssetId))
-    : null;
-
-  return {
-    ...tx,
-    assetName: matchedAsset ? matchedAsset.name : null,
-    hasAssetClaim: Boolean(mintingAssetId),
-  };
-});
-
-const fetchTransactions = async () => {
-  setLoading(true);
-  try {
-    const res = await fetch(`/api/getTransactions?walletAddress=${walletAddress}`);
-    const data = await res.json();
-    setTransactions(data.transactions || []);
-    setAssets(data.assets || []); // Don't forget to set assets state
-  } catch (err) {
-    console.error(err);
+  if (includesBoxesUnlocked) {
+    activeFilters.push('Boxes Unlocked');
   }
-  setLoading(false);
-};
+
+  const includesAssetClaimed = transactions.some(tx => tx.matchedAsset);
+
+  if (includesAssetClaimed) {
+    activeFilters.push('Asset Claimed');
+  }
+
+  const uniqueFilterOptions = [
+    'All Transactions',
+    'Asset Claimed',
+    'Boxes Unlocked',
+    ...activeFilters.filter(f => f !== 'Boxes Unlocked' && f !== 'All Transactions' && f !== 'Asset Claimed'),
+    'Other',
+  ];
+
+  const boxesUnlockedIds = new Set(
+    transactions
+      .filter(tx =>
+        tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
+      )
+      .map(tx => tx.loyaltyTransaction?.loyaltyRule?.id)
+  );
+
+  const filteredTransactions = (() => {
+    if (filter === 'All Transactions') return transactions;
+    if (filter === 'Other') {
+      return transactions.filter(tx => {
+        const id = tx.loyaltyTransaction?.loyaltyRule?.id;
+        return !allFilteredIds.includes(id) && !boxesUnlockedIds.has(id) && !tx.matchedAsset;
+      });
+    }
+    if (filter === 'Boxes Unlocked') {
+      return transactions.filter(tx =>
+        tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
+      );
+    }
+    if (filter === 'Asset Claimed') {
+      return transactions.filter(tx => tx.matchedAsset);
+    }
+    return transactions.filter(tx =>
+      FILTERS[filter]?.includes(tx.loyaltyTransaction?.loyaltyRule?.id)
+    );
+  })();
+
+  const transactionsWithAssetName = transactions.map(tx => {
+    const mintingAssetId = tx.loyaltyTransaction?.metadata?.mintingContractAssetId;
+    const matchedAsset = mintingAssetId
+      ? assets.find(asset => String(asset.id) === String(mintingAssetId))
+      : null;
+    return {
+      ...tx,
+      assetName: matchedAsset ? matchedAsset.name : null,
+      hasAssetClaim: Boolean(mintingAssetId),
+    };
+  });
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/getTransactions?walletAddress=${walletAddress}`);
+      const data = await res.json();
+      setTransactions(data.transactions || []);
+      setAssets(data.assets || []);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
 
   const calculatePointsSum = (transactions) => {
     let totalPointsCredits = 0;
     let totalPointsDebits = 0;
-
     transactions.forEach((tx) => {
       const amount = parseInt(tx.amount, 10);
       if (tx.loyaltyCurrencyId === "fea6109c-8549-45d2-a974-d8531f64994d") {
@@ -226,15 +235,76 @@ const fetchTransactions = async () => {
         }
       }
     });
-
     return totalPointsCredits - totalPointsDebits;
   };
 
   const totalPoints = calculatePointsSum(transactions);
 
+  const prepareChartData = (transactions) => {
+    if (!transactions || transactions.length === 0) {
+      return { labels: [], data: [] };
+    }
+    const countsByDate = {};
+    transactions.forEach(tx => {
+      if (tx.createdAt) {
+        const date = new Date(tx.createdAt).toISOString().split('T')[0];
+        countsByDate[date] = (countsByDate[date] || 0) + 1;
+      }
+    });
+    const sortedDates = Object.keys(countsByDate).sort((a, b) => new Date(a) - new Date(b));
+    const chartLabels = sortedDates;
+    const chartDataValues = sortedDates.map(date => countsByDate[date]);
+    return {
+      labels: chartLabels,
+      data: chartDataValues,
+    };
+  };
+
+  const chartData = prepareChartData(transactions);
+
+  const barChartData = {
+    labels: chartData.labels,
+    datasets: [
+      {
+        label: 'Transactions per Day',
+        data: chartData.data,
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const barChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Daily Transaction Volume',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Number of Transactions',
+        },
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Date',
+        },
+      },
+    },
+  };
+
   const exportToCSV = () => {
     if (!transactions || transactions.length === 0) return;
-
     const headers = [
       'Timestamp',
       'Loyalty Rule Name',
@@ -243,7 +313,6 @@ const fetchTransactions = async () => {
       'Direction',
       'Currency'
     ];
-
     const rows = transactions.map((tx) => {
       const currencyName = currencyMap[tx.loyaltyCurrencyId] || 'Unknown Currency';
       const loyaltyRule = tx.loyaltyTransaction.loyaltyRule || {};
@@ -256,14 +325,11 @@ const fetchTransactions = async () => {
         currencyName
       ];
     });
-
     const csvContent = [headers, ...rows]
       .map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `${walletAddress}_transactions.csv`);
@@ -274,12 +340,10 @@ const fetchTransactions = async () => {
 
   return (
     <div style={{ padding: '2rem', backgroundColor: '#ffffff', color: '#000000', minHeight: '100vh' }}>
-      {/* Top Section Centered */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ textAlign: 'center', fontFamily: 'Epilogue, sans-serif' }}>
           Flow Rewards Transaction Viewer
         </h1>
-
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
           <input
             type="text"
@@ -305,7 +369,6 @@ const fetchTransactions = async () => {
           }}>
             Fetch Transactions
           </button>
-
           <button
             onClick={exportToCSV}
             disabled={transactions.length === 0}
@@ -340,6 +403,12 @@ const fetchTransactions = async () => {
             </strong>
           </div>
 
+          {chartData.labels && chartData.labels.length > 0 && (
+            <div style={{ marginTop: '2rem', marginBottom: '2rem', padding: '1rem', backgroundColor: '#f9f9f9', borderRadius: '5px', width: '100%', maxWidth: '800px', margin: 'auto' }}>
+              <Bar options={barChartOptions} data={barChartData} />
+            </div>
+          )}
+
           <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
             <select
               value={filter}
@@ -358,7 +427,6 @@ const fetchTransactions = async () => {
         </>
       )}
 
-      {/* Results Section Left-Aligned */}
       <div>
         {filteredTransactions.length > 0 ? (
           <ul>
@@ -391,10 +459,10 @@ const fetchTransactions = async () => {
               );
             })}
           </ul>
-
         ) : (
-          !loading && <p style={{ textAlign: 'center' }}>No transactions found</p>
+          !loading && transactions.length > 0 && <p style={{textAlign: 'center'}}>No transactions match the current filter.</p>
         )}
+        {!loading && transactions.length === 0 && <p style={{ textAlign: 'center' }}>No transactions found</p>}
       </div>
     </div>
   );
