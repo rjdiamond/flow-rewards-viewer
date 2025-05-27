@@ -6,11 +6,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('All Transactions');
   const [assets, setAssets] = useState([]);
+  const [balances, setBalances] = useState({ points: 0, boxes: 0, keys: 0 });
 
   const currencyMap = {
-    "d897904c-6dfb-4b43-a036-4938f96e7b51": "Keys",
-    "575d32ce-3b1f-469f-a08f-392e3d3b0812": "Boxes",
-    "fea6109c-8549-45d2-a974-d8531f64994d": "Points"
+    "d897904c-6dfb-4b43-a036-4938f96e7b51": "keys",
+    "575d32ce-3b1f-469f-a08f-392e3d3b0812": "boxes",
+    "fea6109c-8549-45d2-a974-d8531f64994d": "points"
   };
 
   // Define filters and their corresponding loyaltyRule IDs
@@ -205,32 +206,14 @@ const fetchTransactions = async () => {
     const res = await fetch(`/api/getTransactions?walletAddress=${walletAddress}`);
     const data = await res.json();
     setTransactions(data.transactions || []);
-    setAssets(data.assets || []); // Don't forget to set assets state
+    setAssets(data.assets || []);
+    console.log("API returned balances:", data.balances);
+    setBalances(data.balances || { points: 0, boxes: 0, keys: 0 });
   } catch (err) {
     console.error(err);
   }
   setLoading(false);
 };
-
-  const calculatePointsSum = (transactions) => {
-    let totalPointsCredits = 0;
-    let totalPointsDebits = 0;
-
-    transactions.forEach((tx) => {
-      const amount = parseInt(tx.amount, 10);
-      if (tx.loyaltyCurrencyId === "fea6109c-8549-45d2-a974-d8531f64994d") {
-        if (tx.direction === 'credit') {
-          totalPointsCredits += amount;
-        } else if (tx.direction === 'debit') {
-          totalPointsDebits += amount;
-        }
-      }
-    });
-
-    return totalPointsCredits - totalPointsDebits;
-  };
-
-  const totalPoints = calculatePointsSum(transactions);
 
   const exportToCSV = () => {
     if (!transactions || transactions.length === 0) return;
@@ -272,6 +255,9 @@ const fetchTransactions = async () => {
     document.body.removeChild(link);
   };
 
+  const claimedTxs = filteredTransactions.filter(tx => tx.matchedAsset);
+  const otherTxs = filteredTransactions.filter(tx => !tx.matchedAsset);
+
   return (
     <div style={{ padding: '2rem', backgroundColor: '#ffffff', color: '#000000', minHeight: '100vh' }}>
       {/* Top Section Centered */}
@@ -280,7 +266,7 @@ const fetchTransactions = async () => {
           Flow Rewards Transaction Viewer
         </h1>
 
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
           <input
             type="text"
             placeholder="Enter wallet address"
@@ -293,6 +279,7 @@ const fetchTransactions = async () => {
               color: '#000',
               border: '1px solid #ccc',
               borderRadius: '5px',
+
             }}
           />
           <button onClick={fetchTransactions} style={{
@@ -329,15 +316,30 @@ const fetchTransactions = async () => {
       {transactions.length > 0 && (
         <>
           <div style={{
-            marginBottom: '2rem',
+            marginBottom: '1rem',
             backgroundColor: '#f0f8ff',
             padding: '1.5rem',
             borderRadius: '5px',
-            textAlign: 'center'
+            textAlign: 'center',
+            marginBottom: '2rem'
           }}>
-            <strong style={{ fontSize: '1.5rem', color: '#2d8b38', fontWeight: 'bold' }}>
-              Total Points: {totalPoints}
-            </strong>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <div>
+                <strong style={{ fontSize: '1.5rem', color: '#2d8b38', fontWeight: 'bold' }}>
+                  Points: {balances.points}
+                </strong>
+              </div>
+              <div>
+                <strong style={{ fontSize: '1.5rem', color: '#2d5f8b', fontWeight: 'bold' }}>
+                  Boxes: {balances.boxes}
+                </strong>
+              </div>
+              <div>
+                <strong style={{ fontSize: '1.5rem', color: '#2d5f8b', fontWeight: 'bold' }}>
+                  Keys: {balances.keys}
+                </strong>
+              </div>
+            </div>
           </div>
 
           <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
@@ -362,38 +364,45 @@ const fetchTransactions = async () => {
       <div>
         {filteredTransactions.length > 0 ? (
           <ul>
-            {filteredTransactions.map((tx) => {
-              const currencyName = currencyMap[tx.loyaltyCurrencyId] || "Unknown Currency";
-              const amountColor = tx.direction === 'credit' ? 'green' : 'red';
-              const loyaltyRule = tx.loyaltyTransaction.loyaltyRule;
-              const loyaltyRuleName = loyaltyRule ? loyaltyRule.name : 'No loyalty rule';
-              const loyaltyRuleDescription = loyaltyRule ? loyaltyRule.description : '';
-              const assetName = tx.matchedAsset ? tx.matchedAsset.name : 'Unknown Asset';
+            {[...filteredTransactions]
+              .sort((a, b) => {
+                const aHasAsset = transactionsWithAssetName.find(t => t.id === a.id)?.hasAssetClaim;
+                const bHasAsset = transactionsWithAssetName.find(t => t.id === b.id)?.hasAssetClaim;
+                return (bHasAsset === true ? 1 : 0) - (aHasAsset === true ? 1 : 0); // Sort true first
+              })
+              .map((tx) => {
+                const currencyName = currencyMap[tx.loyaltyCurrencyId] || "Unknown Currency";
+                const amountColor = tx.direction === 'credit' ? 'green' : 'red';
+                const loyaltyRule = tx.loyaltyTransaction.loyaltyRule || {};
+                const loyaltyRuleName = loyaltyRule.name || 'No loyalty rule';
+                const loyaltyRuleDescription = loyaltyRule.description || '';
+                const matchedTx = transactionsWithAssetName.find(t => t.id === tx.id);
 
-              return (
-                <li key={tx.id} style={{ marginBottom: '1rem' }}>
-                  <strong>Timestamp:</strong> {new Date(tx.createdAt).toLocaleString()} <br />
-                  <strong>Loyalty Rule:</strong> {loyaltyRuleName}
-                  {loyaltyRuleDescription && ` (${loyaltyRuleDescription})`}
-                  <br />
-                  <strong>Amount: </strong>
-                  <span style={{ color: amountColor }}>
-                    {tx.amount} {currencyName}
-                  </span>
-                  {assetName !== 'Unknown Asset' && (
-                    <>
-                      <br />
-                      <strong>Asset Claimed! </strong> {assetName}
-                    </>
-                  )}
-                  <hr />
-                </li>
-              );
-            })}
+                return (
+                  <li key={tx.id} style={{ marginBottom: '1rem' }}>
+                    <strong>Timestamp:</strong> {new Date(tx.createdAt).toLocaleString()} <br />
+                    <strong>Loyalty Rule:</strong> {loyaltyRuleName}
+                    {loyaltyRuleDescription && ` (${loyaltyRuleDescription})`}
+                    <br />
+                    <strong>Amount: </strong>
+                    <span style={{ color: amountColor }}>
+                      {tx.amount} {currencyName}
+                    </span>
+                    {matchedTx?.hasAssetClaim && matchedTx?.assetName && (
+                      <>
+                        <br />
+                        <strong>Asset Claimed!</strong> {matchedTx.assetName}
+                      </>
+                    )}
+                    <hr />
+                  </li>
+                );
+              })}
           </ul>
-
         ) : (
-          !loading && <p style={{ textAlign: 'center' }}>No transactions found</p>
+          !loading && <p style={{ textAlign: 'center' }}>Note: If the account has claimed any assets they will show at the top of the transactions below!
+
+</p>
         )}
       </div>
     </div>
