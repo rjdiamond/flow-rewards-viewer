@@ -476,9 +476,9 @@ useEffect(() => {
 }, [filter, filteredTransactions]);
 
   return (
-    <div style={{ padding: '2rem', backgroundColor: '#ffffff', color: '#000000', minHeight: '100vh' }}>
+    <div style={{ padding: '1rem', backgroundColor: '#ffffff', color: '#000000', minHeight: '100vh' }}>
       {/* Top Section Centered */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem', marginTop: '1.5rem' }}>
         <h1 style={{ textAlign: 'center', fontFamily: 'Epilogue, sans-serif' }}>
           Flow Community Rewards Transaction Viewer
         </h1>
@@ -527,7 +527,7 @@ useEffect(() => {
       {loading && <p style={{ textAlign: 'center' }}>Loading...</p>}
       {transactions.length > 0 && (
         <>
-          <div style={{ textAlign: 'center', marginBottom: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.5rem', marginTop: '.5rem' }}>
             <select
               value={filter}
               onChange={(e) => {
