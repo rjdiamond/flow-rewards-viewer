@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -17,16 +16,16 @@ export default function Home() {
   const [walletAddress, setWalletAddress] = useState('');
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [assets, setAssets] = useState([]);
+  const [balances, setBalances] = useState({ points: 0, boxes: 0, keys: 0 });
   const [filter, setFilter] = useState('All Transactions');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subFilter, setSubFilter] = useState('');
-  const [assets, setAssets] = useState([]);
-  const [balances, setBalances] = useState({ points: 0, boxes: 0, keys: 0 });
-  const [visibleCount, setVisibleCount] = useState(100);
+  const [filterStats, setFilterStats] = useState({ boxes: 0, keys: 0, points: 0 });
 
-// Stats for selected filter
-const [filterStats, setFilterStats] = useState({ boxes: 0, keys: 0, points: 0 });
-
+  const FETCH_LIMIT = 100;
   const currencyMap = {
     "d897904c-6dfb-4b43-a036-4938f96e7b51": "keys",
     "575d32ce-3b1f-469f-a08f-392e3d3b0812": "boxes",
@@ -205,6 +204,46 @@ const activeFilters = allFilterNames.filter(filterName =>
   transactions.some(tx => FILTERS[filterName].includes(tx.loyaltyTransaction?.loyaltyRule?.id))
 );
 
+  const fetchTransactions = async (startingAfter = null, reset = false) => {
+    setLoading(true);
+
+    const url = `/api/getTransactions?walletAddress=${walletAddress}`
+      + (startingAfter ? `&startingAfter=${startingAfter}` : "");
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (reset) {
+        setTransactions(data.transactions || []);
+      } else {
+        setTransactions(prev => [...prev, ...(data.transactions || [])]);
+      }
+
+      setAssets(data.assets || []);
+      setBalances(data.balances || { points: 0, boxes: 0, keys: 0 });
+
+      if (data.nextCursor) {
+        setCursor(data.nextCursor);
+        setHasMore(true);
+      } else {
+        setCursor(null);
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    setTransactions([]);
+    setCursor(null);
+    setHasMore(false);
+    fetchTransactions(null, true);
+  };
+  
 // Add "Boxes Unlocked" filter if the wallet is in any description
 const includesBoxesUnlocked = transactions.some(tx =>
   tx.loyaltyTransaction?.description?.toLowerCase().includes(walletAddress.toLowerCase())
@@ -256,6 +295,7 @@ const boxesUnlockedIds = new Set(
     .map(tx => tx.loyaltyTransaction?.loyaltyRule?.id)
 );
 
+  
 // Filtering logic
 const isFlowRewardsFilter = filter === 'Flow Rewards';
 const isProtocolsFilter = filter === 'Protocols';
@@ -707,34 +747,23 @@ useEffect(() => {
                   );
                 })}
             </ul>
-            {visibleCount < filteredTransactions.length && (
-              <div style={{ textAlign: 'center', margin: '1rem 0' }}>
-                <button
-                  onClick={() => setVisibleCount(visibleCount + 100)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#eee',
-                    color: '#000',
-                    border: '1px solid #999',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Load More
-                </button>
-              </div>
-            )}
-            {/* Footer only after successful search, below transactions */}
-            <footer style={{ textAlign: 'center', margin: '2rem 0', color: '#404040ff' }}>
-              <p>© 2025 Flow Community Rewards Viewer.</p>
-            </footer>
-          </>
-        ) : (
-          !loading && <p style={{ textAlign: 'center' }}></p>
-        )}
-      </div>
-    </div>
-    
-  );
-}
 
+          {hasMore && (
+            <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+              <button
+                onClick={() => fetchTransactions(cursor)}
+                disabled={loading}
+                style={{ padding: '0.5rem 1rem', borderRadius: '5px' }}
+              >
+                {loading ? "Loading..." : "Load More"}
+              </button>
+            </div>
+          )}
+
+          <footer style={{ textAlign: 'center', margin: '2rem 0', color: '#404040' }}>
+            <p>© 2025 Flow Community Rewards Viewer.</p>
+          </footer>
+        </>
+      )}
+    </div>
+  );
