@@ -706,64 +706,59 @@ useEffect(() => {
         </>
       )}
       {/* Results Section Left-Aligned */}
-      <div>
-        {filteredTransactions.length > 0 ? (
-          <>
-            <ul>
-              {[...filteredTransactions]
-                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                .slice(0, visibleCount)
-                .map((tx) => {
-                  const currencyName = currencyMap[tx.loyaltyCurrencyId] || "Unknown Currency";
-                  const amountColor = tx.direction === 'credit' ? 'green' : 'red';
-                  const loyaltyRule = tx.loyaltyTransaction.loyaltyRule || {};
-                  const loyaltyRuleName = loyaltyRule.name || 'No loyalty rule';
-                  const loyaltyRuleDescription = loyaltyRule.description || '';
-                  const loyaltyRuleId = loyaltyRule.id || '';
-                  const matchedTx = transactionsWithAssetName.find(t => t.id === tx.id);
-                  return (
-                    <li key={tx.id} style={{ marginBottom: '1rem' }}>
-                      <strong>Timestamp:</strong> {new Date(tx.createdAt).toLocaleString()} <br />
-                      <strong>Loyalty Rule:</strong> {loyaltyRuleName}
-                      {loyaltyRuleDescription && ` (${loyaltyRuleDescription})`}
-                      {/*
-                      {loyaltyRuleId && (
-                        <><br /><span style={{ fontSize: '0.95em', color: '#888' }}>ID: {loyaltyRuleId}</span></>
-                      )}
-                      */}
-                      <br />
-                      <strong>Amount: </strong>
-                      <span style={{ color: amountColor }}>
-                        {tx.amount} {currencyName}
-                      </span>
-                      {matchedTx?.hasAssetClaim && matchedTx?.assetName && (
-                        <>
-                          <br />
-                          <strong>Asset Claimed!</strong> {matchedTx.assetName}
-                        </>
-                      )}
-                      <hr />
-                    </li>
-                  );
-                })}
-            </ul>
+<div>
+  {filteredTransactions.length > 0 ? (
+    <>
+      <ul>
+        {[...filteredTransactions]
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .map((tx) => {
+            const currencyName = currencyMap[tx.loyaltyCurrencyId] || "Unknown Currency";
+            const amountColor = tx.direction === 'credit' ? 'green' : 'red';
+            const loyaltyRule = tx.loyaltyTransaction.loyaltyRule || {};
+            const loyaltyRuleName = loyaltyRule.name || 'No loyalty rule';
+            const loyaltyRuleDescription = loyaltyRule.description || '';
+            const loyaltyRuleId = loyaltyRule.id || '';
+            const matchedTx = transactionsWithAssetName.find(t => t.id === tx.id);
 
-          {hasMore && (
-            <div style={{ textAlign: 'center', margin: '2rem 0' }}>
-              <button
-                onClick={() => fetchTransactions(cursor)}
-                disabled={loading}
-                style={{ padding: '0.5rem 1rem', borderRadius: '5px' }}
-              >
-                {loading ? "Loading..." : "Load More"}
-              </button>
-            </div>
-          )}
+            return (
+              <li key={tx.id} style={{ marginBottom: '1rem' }}>
+                <strong>Timestamp:</strong> {new Date(tx.createdAt).toLocaleString()} <br />
+                <strong>Loyalty Rule:</strong> {loyaltyRuleName}
+                {loyaltyRuleDescription && ` (${loyaltyRuleDescription})`}
+                <br />
+                <strong>Amount: </strong>
+                <span style={{ color: amountColor }}>
+                  {tx.amount} {currencyName}
+                </span>
+                {matchedTx?.hasAssetClaim && matchedTx?.assetName && (
+                  <>
+                    <br />
+                    <strong>Asset Claimed!</strong> {matchedTx.assetName}
+                  </>
+                )}
+                <hr />
+              </li>
+            );
+          })}
+      </ul>
 
-          <footer style={{ textAlign: 'center', margin: '2rem 0', color: '#404040' }}>
-            <p>© 2025 Flow Community Rewards Viewer.</p>
-          </footer>
-        </>
+      {hasMore && (
+        <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+          <button
+            onClick={() => fetchTransactions(cursor)}
+            disabled={loading}
+            style={{ padding: '0.5rem 1rem', borderRadius: '5px' }}
+          >
+            {loading ? "Loading..." : "Load More"}
+          </button>
+        </div>
       )}
-    </div>
-  );
+
+      <footer style={{ textAlign: 'center', margin: '2rem 0', color: '#404040' }}>
+        <p>© 2025 Flow Community Rewards Viewer.</p>
+      </footer>
+    </>
+  ) : null}
+</div>
+
