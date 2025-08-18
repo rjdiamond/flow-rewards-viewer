@@ -24,6 +24,8 @@ export default function Home() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [subFilter, setSubFilter] = useState('');
   const [filterStats, setFilterStats] = useState({ boxes: 0, keys: 0, points: 0 });
+  // Track initial search
+  const [searched, setSearched] = useState(false);
 
   const FETCH_LIMIT = 100;
   const currencyMap = {
@@ -204,25 +206,22 @@ const activeFilters = allFilterNames.filter(filterName =>
   transactions.some(tx => FILTERS[filterName].includes(tx.loyaltyTransaction?.loyaltyRule?.id))
 );
 
+  // Fetch transactions, paginated by 100
   const fetchTransactions = async (startingAfter = null, reset = false) => {
     setLoading(true);
-
-    const url = `/api/getTransactions?walletAddress=${walletAddress}`
-      + (startingAfter ? `&startingAfter=${startingAfter}` : "");
-
+    let url = `/api/getTransactions?walletAddress=${walletAddress}&limit=100`;
+    if (startingAfter) url += `&startingAfter=${startingAfter}`;
     try {
       const res = await fetch(url);
       const data = await res.json();
-
       if (reset) {
         setTransactions(data.transactions || []);
+        setSearched(true);
       } else {
         setTransactions(prev => [...prev, ...(data.transactions || [])]);
       }
-
       setAssets(data.assets || []);
       setBalances(data.balances || { points: 0, boxes: 0, keys: 0 });
-
       if (data.nextCursor) {
         setCursor(data.nextCursor);
         setHasMore(true);
@@ -237,10 +236,12 @@ const activeFilters = allFilterNames.filter(filterName =>
     }
   };
 
+  // Search button handler
   const handleSearch = () => {
     setTransactions([]);
     setCursor(null);
     setHasMore(false);
+    setSearched(false);
     fetchTransactions(null, true);
   };
   
@@ -417,21 +418,7 @@ const transactionsWithAssetName = transactions.map(tx => {
   };
 });
 
-const fetchTransactions = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/getTransactions?walletAddress=${walletAddress}`);
-      const data = await res.json();
-      setTransactions(data.transactions || []);
-      setAssets(data.assets || []);
-      setVisibleCount(100); // Reset pagination on new fetch
-      console.log("API returned balances:", data.balances);
-      setBalances(data.balances || { points: 0, boxes: 0, keys: 0 });
-    } catch (err) {
-      console.error(err);
-    }
-    setLoading(false);
-};
+// ...existing code...
 
   const exportToCSV = () => {
     if (!transactions || transactions.length === 0) return;
@@ -537,7 +524,7 @@ useEffect(() => {
               borderRadius: '5px',
             }}
           />
-          <button onClick={fetchTransactions} style={{
+          <button onClick={handleSearch} style={{
             padding: '0.5rem 1rem',
             backgroundColor: '#eee',
             color: '#000',
@@ -565,7 +552,7 @@ useEffect(() => {
         </div>
       </div>
       {loading && <p style={{ textAlign: 'center' }}>Loading...</p>}
-      {transactions.length > 0 && (
+  {searched && transactions.length > 0 && (
         <>
           <div style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.5rem', marginTop: '.5rem' }}>
             <select
@@ -718,7 +705,6 @@ useEffect(() => {
             const loyaltyRule = tx.loyaltyTransaction.loyaltyRule || {};
             const loyaltyRuleName = loyaltyRule.name || 'No loyalty rule';
             const loyaltyRuleDescription = loyaltyRule.description || '';
-            const loyaltyRuleId = loyaltyRule.id || '';
             const matchedTx = transactionsWithAssetName.find(t => t.id === tx.id);
 
             return (
@@ -746,10 +732,9 @@ useEffect(() => {
       {hasMore && (
         <div style={{ textAlign: 'center', margin: '2rem 0' }}>
           <button
-            onClick={() => fetchTransactions(cursor)}
+            onClick={() => fetchTransactions(cursor, false)}
             disabled={loading}
-            style={{ padding: '0.5rem 1rem', borderRadius: '5px' }}
-          >
+            style={{ padding: '0.5rem 1rem', borderRadius: '5px' }}>
             {loading ? "Loading..." : "Load More"}
           </button>
         </div>
@@ -760,5 +745,8 @@ useEffect(() => {
       </footer>
     </>
   ) : null}
-</div>
-
+  </div>
+{/* Results Section Left-Aligned ends here */}
+    </div>
+  );
+}
